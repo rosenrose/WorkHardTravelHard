@@ -9,11 +9,15 @@ import {
   TouchableWithoutFeedback,
   Pressable,
   TextInput,
+  ScrollView,
 } from "react-native";
 import { theme } from "./colors";
 
 export default function App() {
   const [isWork, setIsWork] = useState(true);
+  const [text, setText] = useState("");
+  const [todos, setTodos] = useState({});
+
   const work = () => {
     setIsWork(true);
   };
@@ -21,9 +25,17 @@ export default function App() {
     setIsWork(false);
   };
 
-  const [text, setText] = useState("");
   const onChangeText = (input) => {
     setText(input);
+  };
+  const addTodo = () => {
+    if (!text.length) {
+      return;
+    }
+
+    const newTodos = { ...todos, [Date.now()]: { text, work: isWork } };
+    setTodos(newTodos);
+    setText("");
   };
 
   return (
@@ -51,12 +63,20 @@ export default function App() {
         placeholder={isWork ? "Add a Todo" : "Where do you want to go?"}
         onChangeText={onChangeText}
         value={text}
+        onSubmitEditing={addTodo}
         // keyboardType="visible-password"
         // returnKeyType="go"
         // returnKeyLabel="zz"
         // secureTextEntry
         // multiline
       />
+      <ScrollView>
+        {Object.entries(todos).map(([key, todo]) => (
+          <View key={key} style={styles.todo}>
+            <Text style={styles.todoText}>{todo.text}</Text>
+          </View>
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -81,7 +101,18 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 15,
     borderRadius: 30,
-    marginTop: 20,
+    marginVertical: 20,
     fontSize: 18,
+  },
+  todo: {
+    backgroundColor: theme.todoBackground,
+    marginVertical: 10,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderRadius: 15,
+  },
+  todoText: {
+    color: "white",
+    fontSize: 16,
   },
 });
