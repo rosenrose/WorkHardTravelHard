@@ -10,10 +10,10 @@ import {
   Pressable,
   TextInput,
   ScrollView,
+  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { theme } from "./colors";
-import { Alert } from "react-native-web";
 import { Fontisto } from "@expo/vector-icons";
 
 const STORAGE_KEY = "todos";
