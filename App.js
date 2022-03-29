@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -11,7 +11,10 @@ import {
   TextInput,
   ScrollView,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { theme } from "./colors";
+
+const STORAGE_KEY = "todos";
 
 export default function App() {
   const [isWork, setIsWork] = useState(true);
@@ -28,15 +31,36 @@ export default function App() {
   const onChangeText = (input) => {
     setText(input);
   };
-  const addTodo = () => {
+  const loadTodos = async () => {
+    try {
+      const savedTodos = await AsyncStorage.getItem(STORAGE_KEY);
+      //empty: null
+      // console.log(savedTodos);
+
+      if (savedTodos) {
+        setTodos(JSON.parse(savedTodos));
+      }
+    } catch (e) {}
+  };
+  const saveTodos = async (toSave) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    } catch (e) {}
+  };
+  const addTodo = async () => {
     if (!text.length) {
       return;
     }
 
-    const newTodos = { ...todos, [Date.now()]: { text, work: isWork } };
+    const newTodos = { ...todos, [Date.now()]: { text, isWork } };
     setTodos(newTodos);
     setText("");
+    await saveTodos(newTodos);
   };
+
+  useEffect(() => {
+    loadTodos();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -71,11 +95,13 @@ export default function App() {
         // multiline
       />
       <ScrollView>
-        {Object.entries(todos).map(([key, todo]) => (
-          <View key={key} style={styles.todo}>
-            <Text style={styles.todoText}>{todo.text}</Text>
-          </View>
-        ))}
+        {Object.entries(todos)
+          .filter(([key, todo]) => todo.isWork === isWork)
+          .map(([key, todo]) => (
+            <View key={key} style={styles.todo}>
+              <Text style={styles.todoText}>{todo.text}</Text>
+            </View>
+          ))}
       </ScrollView>
     </View>
   );
