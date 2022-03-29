@@ -14,9 +14,10 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { theme } from "./colors";
-import { Fontisto } from "@expo/vector-icons";
+import { Fontisto, Feather } from "@expo/vector-icons";
 
-const STORAGE_KEY = "todos";
+const TODOS_KEY = "todos";
+const ISWORK_KEY = "iswork";
 
 export default function App() {
   const [isWork, setIsWork] = useState(true);
@@ -26,9 +27,11 @@ export default function App() {
 
   const work = () => {
     setIsWork(true);
+    AsyncStorage.setItem(ISWORK_KEY, "true");
   };
   const travel = () => {
     setIsWork(false);
+    AsyncStorage.setItem(ISWORK_KEY, "false");
   };
 
   const onChangeText = (input) => {
@@ -36,19 +39,18 @@ export default function App() {
   };
   const loadTodos = async () => {
     try {
-      const savedTodos = await AsyncStorage.getItem(STORAGE_KEY);
+      const savedTodos = await AsyncStorage.getItem(TODOS_KEY);
       // empty: null
       // console.log(savedTodos);
 
       if (savedTodos) {
         setTodos(JSON.parse(savedTodos));
       }
-      setIsLoading(false);
     } catch (e) {}
   };
   const saveTodos = async (toSave) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+      await AsyncStorage.setItem(TODOS_KEY, JSON.stringify(toSave));
     } catch (e) {}
   };
   const addTodo = async () => {
@@ -56,12 +58,15 @@ export default function App() {
       return;
     }
 
-    const newTodos = { ...todos, [Date.now()]: { text, isWork } };
+    const newTodos = {
+      ...todos,
+      [Date.now()]: { text, isWork, finished: false, isEditing: false },
+    };
     setTodos(newTodos);
     await saveTodos(newTodos);
     setText("");
   };
-  const deleteTodo = async (id) => {
+  const deleteTodo = (id) => {
     Alert.alert("Delete To Do", "Are you sure?", [
       {
         text: "OK",
@@ -76,8 +81,42 @@ export default function App() {
     ]);
   };
 
+  const loadIsWork = async () => {
+    try {
+      const saveIsWork = await AsyncStorage.getItem(ISWORK_KEY);
+      setIsWork(saveIsWork === "true" ? true : false);
+    } catch (e) {}
+  };
+
+  const finishTodo = (id) => {
+    const newTodos = { ...todos };
+    newTodos[id].finished = !newTodos[id].finished;
+    setTodos(newTodos);
+    saveTodos(newTodos);
+  };
+  const editTodo = (id) => {
+    const newTodos = { ...todos };
+    newTodos[id].isEditing = !newTodos[id].isEditing;
+    setTodos(newTodos);
+  };
+  const onChangeTodo = (id, text) => {
+    const newTodos = { ...todos };
+    newTodos[id].text = text;
+    setTodos(newTodos);
+  };
+  const saveEditedTodo = (id) => {
+    const newTodos = { ...todos };
+    newTodos[id].isEditing = false;
+    setTodos(newTodos);
+    saveTodos(newTodos);
+  };
+
   useEffect(() => {
-    loadTodos();
+    (async () => {
+      await loadIsWork();
+      await loadTodos();
+      setIsLoading(false);
+    })();
   }, []);
 
   return (
@@ -120,14 +159,58 @@ export default function App() {
             .filter(([id, todo]) => todo.isWork === isWork)
             .map(([id, todo]) => (
               <View key={id} style={styles.todo}>
-                <Text style={styles.todoText}>{todo.text}</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    deleteTodo(id);
-                  }}
-                >
-                  <Fontisto name="trash" size={18} color={theme.gray} />
-                </TouchableOpacity>
+                {todo.isEditing ? (
+                  <TextInput
+                    style={styles.todoInput}
+                    value={todo.text}
+                    onChangeText={(text) => {
+                      onChangeTodo(id, text);
+                    }}
+                    onSubmitEditing={() => {
+                      saveEditedTodo(id);
+                    }}
+                  />
+                ) : (
+                  <Text
+                    style={{
+                      ...styles.todoText,
+                      color: todo.finished ? theme.gray : "white",
+                      textDecorationLine: todo.finished ? "line-through" : "none",
+                    }}
+                  >
+                    {todo.text}
+                  </Text>
+                )}
+
+                <View style={styles.icons}>
+                  <TouchableHighlight
+                    onPress={() => {
+                      editTodo(id);
+                    }}
+                    style={{ marginRight: 20 }}
+                  >
+                    <Feather name="edit" size={20} color={todo.isEditing ? "white" : theme.gray} />
+                  </TouchableHighlight>
+                  <TouchableHighlight
+                    onPress={() => {
+                      finishTodo(id);
+                    }}
+                    style={{ marginRight: 20 }}
+                  >
+                    <Fontisto
+                      name={todo.finished ? "checkbox-active" : "checkbox-passive"}
+                      size={20}
+                      color={theme.gray}
+                    />
+                  </TouchableHighlight>
+                  <TouchableOpacity
+                    onPress={() => {
+                      deleteTodo(id);
+                    }}
+                  >
+                    <Fontisto name="trash" size={20} color={theme.gray} />
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
         </ScrollView>
@@ -159,6 +242,14 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     fontSize: 18,
   },
+  todoInput: {
+    width: "50%",
+    backgroundColor: "white",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    fontSize: 16,
+  },
   todo: {
     backgroundColor: theme.todoBackground,
     flexDirection: "row",
@@ -170,7 +261,9 @@ const styles = StyleSheet.create({
     borderRadius: 15,
   },
   todoText: {
-    color: "white",
-    fontSize: 16,
+    fontSize: 18,
+  },
+  icons: {
+    flexDirection: "row",
   },
 });
