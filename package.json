@@ -8,8 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "eject": "expo eject",
-    "deploy": "gh-pages -d web-build",
-    "predeploy": "expo build:web"
+    "predeploy": "expo build:web",
+    "deploy": "gh-pages -d web-build"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "~1.15.0",
